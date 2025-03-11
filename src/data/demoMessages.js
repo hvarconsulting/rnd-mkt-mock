@@ -79,7 +79,7 @@ const demo2Messages = [
         text: `Melhorar a experiência de atendimento ao cliente é uma meta essencial. 📈
   
   Para direcionar nossa conversa, poderia compartilhar quais canais vocês utilizam (telefone, chat, email etc.) e os principais desafios no dia a dia?`,
-        persona: 'general',
+        persona: 'conversational',
         timestamp: '14:31'
     },
     {
@@ -140,7 +140,7 @@ const demo3Messages = [
         text: `Ótimo! A <span style="color:#2563eb">IA</span> pode realmente transformar diversos processos internos. 🤖
   
   Para direcionar melhor nossa conversa, poderia compartilhar quais áreas específicas vocês estão considerando aprimorar (ex: automação de documentos, análise de dados, atendimento ao cliente etc.)?`,
-        persona: 'general',
+        persona: 'genai',
         timestamp: '14:41'
     },
     {

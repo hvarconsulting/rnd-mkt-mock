@@ -2,8 +2,8 @@
 const personas = {
     general: {
         name: "Assistente Hvar",
-        color: "#4f46e5", // Índigo
-        secondaryColor: "#3730a3",
+        color: "#f97316",
+        secondaryColor: "rgb(143 227 172)",
         font: "'Inter', sans-serif",
         icon: "🤖"
     },
