@@ -7,6 +7,10 @@ const AdaptativeChatbot = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [showDemo, setShowDemo] = useState(1);
     const [activeTab, setActiveTab] = useState('concept');
+    const [animationStep, setAnimationStep] = useState(0);
+    const [showRightColumn, setShowRightColumn] = useState(false);
+    const [autoplayComplete, setAutoplayComplete] = useState(false);
+    const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
     // Definição das personas/especialidades
     const personas = {
@@ -150,8 +154,60 @@ const AdaptativeChatbot = () => {
     const allDemos = [demo1Messages, demo2Messages, demo3Messages];
 
     useEffect(() => {
-        setMessages(allDemos[showDemo - 1]);
+        // Reset animation state when demo changes
+        setAnimationStep(0);
+        setShowRightColumn(false);
+        setAutoplayComplete(false);
+
+        // Initialize with first bot message and set index to first user message (index 1)
+        const initialBotMessage = allDemos[showDemo - 1][0];
+        setMessages([initialBotMessage]);
+        setCurrentMessageIndex(1); // Start with the first user message
     }, [showDemo]);
+
+    // Then update your handleUserInput function:
+    const handleUserInput = () => {
+        if (inputValue.trim() === '') return;
+
+        // Start or continue the animation sequence
+        if (currentMessageIndex < allDemos[showDemo - 1].length) {
+            // Get next predefined message (user message)
+            const nextMessage = allDemos[showDemo - 1][currentMessageIndex];
+
+            // Add the predefined user message (not what the user actually typed)
+            setMessages(prev => [...prev, nextMessage]);
+            setInputValue(''); // Clear input field
+
+            // Show typing indicator
+            setIsTyping(true);
+
+            // After a slight delay, add the bot response if available
+            setTimeout(() => {
+                setIsTyping(false);
+
+                // Move to the next message index
+                const nextIndex = currentMessageIndex + 1;
+                setCurrentMessageIndex(nextIndex);
+
+                // Check if there's a bot message next
+                if (nextIndex < allDemos[showDemo - 1].length &&
+                    allDemos[showDemo - 1][nextIndex].sender === 'bot') {
+                    // Add the bot response
+                    setMessages(prev => [...prev, allDemos[showDemo - 1][nextIndex]]);
+                    setCurrentMessageIndex(nextIndex + 1); // Move to the next message
+                }
+
+                // Check if we've reached the end of the conversation
+                if (nextIndex >= allDemos[showDemo - 1].length - 1) {
+                    // Animation complete, show the right column
+                    setTimeout(() => {
+                        setShowRightColumn(true);
+                        setAutoplayComplete(true);
+                    }, 1000);
+                }
+            }, 1500);
+        }
+    };
 
     const getActivePersona = () => {
         if (messages.length === 0) return personas.general;
@@ -405,18 +461,35 @@ const AdaptativeChatbot = () => {
                 </button>
             </div>
 
-            <div style={layoutStyle}>
-                <div style={leftColumnStyle}>
-                    <div style={highlightBoxStyle}>
-                        <h3 style={{ margin: "0 0 10px 0", color: "#2563eb" }}>{demoDescriptions[showDemo].title}</h3>
-                        <p style={{ margin: "0 0 10px 0", fontSize: "14px" }}>{demoDescriptions[showDemo].description}</p>
-                        <div style={{ display: "flex", alignItems: "center", marginTop: "10px" }}>
-                            <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#2563eb", marginRight: "10px" }}></div>
-                            <span style={{ fontSize: "14px", fontWeight: "500" }}>{demoDescriptions[showDemo].key}</span>
+            <div style={{
+                ...layoutStyle,
+                flexDirection: showRightColumn ? "row" : "column",
+                alignItems: showRightColumn ? "flex-start" : "center"
+            }}>
+                <div style={{
+                    ...leftColumnStyle,
+                    width: showRightColumn ? "380px" : "400px",
+                    margin: showRightColumn ? "0" : "0 auto"
+                }}>
+                    {showRightColumn && (
+                        <div style={{
+                            ...highlightBoxStyle,
+                            animation: "fadeIn 0.5s ease-in-out",
+                        }}>
+                            <h3 style={{ margin: "0 0 10px 0", color: "#2563eb" }}>{demoDescriptions[showDemo].title}</h3>
+                            <p style={{ margin: "0 0 10px 0", fontSize: "14px" }}>{demoDescriptions[showDemo].description}</p>
+                            <div style={{ display: "flex", alignItems: "center", marginTop: "10px" }}>
+                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#2563eb", marginRight: "10px" }}></div>
+                                <span style={{ fontSize: "14px", fontWeight: "500" }}>{demoDescriptions[showDemo].key}</span>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    <div style={containerStyle}>
+                    <div style={{
+                        ...containerStyle,
+                        margin: showRightColumn ? "0" : "0 auto",
+                        height: showRightColumn ? "100%" : "500px",
+                    }}>
                         <div style={headerStyle}>
                             <div style={{ display: "flex", alignItems: "center" }}>
                                 <span style={logoStyle}>{activePersona.icon}</span>
@@ -430,14 +503,28 @@ const AdaptativeChatbot = () => {
                         </div>
 
                         <div style={chatBodyStyle}>
+                            {/* Display initial bot greeting if no messages yet */}
+                            {messages.length === 0 && (
+                                <div style={getBotMessageStyle('general')}>
+                                    Olá! Sou o assistente virtual da Hvar. Como posso ajudar sua empresa hoje?
+                                    <span style={timestampStyle}>agora</span>
+                                </div>
+                            )}
+
+                            {/* Display animation messages */}
                             {messages.map((msg, index) => (
-                                <div key={index} style={msg.sender === 'bot' ? getBotMessageStyle(msg.persona) : userMessageStyle}>
+                                <div key={index}
+                                    style={{
+                                        ...msg.sender === 'bot' ? getBotMessageStyle(msg.persona) : userMessageStyle,
+                                        animation: "fadeIn 0.3s ease-in-out"
+                                    }}>
                                     {msg.text}
                                     <span style={timestampStyle}>{msg.timestamp}</span>
                                 </div>
                             ))}
+
                             {isTyping && (
-                                <div style={{ ...getBotMessageStyle('general'), width: "60px" }}>
+                                <div style={{ ...getBotMessageStyle('general'), width: "60px", animation: "fadeIn 0.3s ease-in-out" }}>
                                     <span>...</span>
                                 </div>
                             )}
@@ -449,317 +536,347 @@ const AdaptativeChatbot = () => {
                                 placeholder="Digite sua mensagem..."
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleUserInput();
+                                    }
+                                }}
                             />
-                            <button style={buttonStyle}>
+                            <button
+                                style={buttonStyle}
+                                onClick={handleUserInput}
+                            >
                                 ➤
                             </button>
                         </div>
+
+                        {!autoplayComplete && (
+                            <div style={{
+                                padding: "10px",
+                                textAlign: "center",
+                                backgroundColor: "#f5f5f5",
+                                borderTop: "1px solid #eee",
+                                fontSize: "13px",
+                                color: "#666"
+                            }}>
+                                Digite qualquer mensagem e pressione Enter para avançar na demonstração
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div style={rightColumnStyle}>
-                    <div style={tabsStyle}>
-                        <div
-                            style={tabStyle(activeTab === 'concept')}
-                            onClick={() => setActiveTab('concept')}
-                        >
-                            Conceito
-                        </div>
-                        <div
-                            style={tabStyle(activeTab === 'features')}
-                            onClick={() => setActiveTab('features')}
-                        >
-                            Funcionalidades
-                        </div>
-                        <div
-                            style={tabStyle(activeTab === 'benefits')}
-                            onClick={() => setActiveTab('benefits')}
-                        >
-                            Benefícios
-                        </div>
-                        <div
-                            style={tabStyle(activeTab === 'tech')}
-                            onClick={() => setActiveTab('tech')}
-                        >
-                            Tecnologia
-                        </div>
-                    </div>
-
-                    {activeTab === 'concept' && (
-                        <div>
-                            <h2 style={{ color: "#333", marginBottom: "20px" }}>Conceito: Transição Transparente entre Especialidades</h2>
-
-                            <p style={{ lineHeight: "1.6", marginBottom: "20px" }}>
-                                O <strong>Assistente Inteligente Hvar</strong> utiliza um sistema de multi-agentes especializados que se adaptam de forma transparente às necessidades do usuário. Diferentemente dos chatbots tradicionais, onde o usuário precisa selecionar categorias ou ser explicitamente transferido entre departamentos, nosso assistente oferece uma experiência fluida e natural.
-                            </p>
-
-                            <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
-                                <div style={{ flex: 1, backgroundColor: "#f8fafc", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #4f46e5" }}>
-                                    <h3 style={{ fontSize: "16px", marginTop: 0 }}>Abordagem Tradicional</h3>
-                                    <ul style={{ paddingLeft: "20px", margin: "10px 0" }}>
-                                        <li>Usuário seleciona departamento/categoria</li>
-                                        <li>Menus de navegação interrompem o fluxo</li>
-                                        <li>Transferências explícitas entre agentes</li>
-                                        <li>Experiência fragmentada</li>
-                                    </ul>
-                                </div>
-
-                                <div style={{ flex: 1, backgroundColor: "#f0f9ff", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #0ea5e9" }}>
-                                    <h3 style={{ fontSize: "16px", marginTop: 0 }}>Nossa Abordagem</h3>
-                                    <ul style={{ paddingLeft: "20px", margin: "10px 0" }}>
-                                        <li>Detecção automática da especialidade</li>
-                                        <li>Conversa natural sem interrupções</li>
-                                        <li>Transições suaves baseadas no contexto</li>
-                                        <li>Experiência unificada e contínua</li>
-                                    </ul>
-                                </div>
+                {showRightColumn && (
+                    <div style={{
+                        ...rightColumnStyle,
+                        animation: "fadeInRight 0.5s ease-in-out"
+                    }}>
+                        <div style={tabsStyle}>
+                            <div
+                                style={tabStyle(activeTab === 'concept')}
+                                onClick={() => setActiveTab('concept')}
+                            >
+                                Conceito
                             </div>
-
-                            <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px" }}>Como Funciona</h3>
-                            <p style={{ lineHeight: "1.6", marginTop: "15px" }}>
-                                O assistente inicia com uma abordagem generalista. Conforme a conversa evolui, ele identifica automaticamente a especialidade necessária analisando as palavras-chave, intenções e contexto. A transição para o agente especializado ocorre de forma transparente, adaptando sutilmente o tom, a terminologia e as recomendações sem quebrar o fluxo conversacional.
-                            </p>
-
-                            <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>1</div>
-                                    <div>
-                                        <strong>Engajamento inicial</strong> - Abordagem genérica e acolhedora
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>2</div>
-                                    <div>
-                                        <strong>Detecção de necessidade</strong> - Análise das entradas do usuário para identificar a especialidade
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>3</div>
-                                    <div>
-                                        <strong>Qualificação contextual</strong> - Perguntas estratégicas para refinar o entendimento quando necessário
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>4</div>
-                                    <div>
-                                        <strong>Transição fluida</strong> - Mudança para o agente especializado sem interrupção do fluxo
-                                    </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center" }}>
-                                    <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>5</div>
-                                    <div>
-                                        <strong>Resposta especializada</strong> - Comunicação adaptada com terminologia e soluções específicas da área
-                                    </div>
-                                </div>
+                            <div
+                                style={tabStyle(activeTab === 'features')}
+                                onClick={() => setActiveTab('features')}
+                            >
+                                Funcionalidades
+                            </div>
+                            <div
+                                style={tabStyle(activeTab === 'benefits')}
+                                onClick={() => setActiveTab('benefits')}
+                            >
+                                Benefícios
+                            </div>
+                            <div
+                                style={tabStyle(activeTab === 'tech')}
+                                onClick={() => setActiveTab('tech')}
+                            >
+                                Tecnologia
                             </div>
                         </div>
-                    )}
 
-                    {activeTab === 'features' && (
-                        <div>
-                            <h2 style={{ color: "#333", marginBottom: "20px" }}>Funcionalidades Principais</h2>
+                        {activeTab === 'concept' && (
+                            <div>
+                                <h2 style={{ color: "#333", marginBottom: "20px" }}>Conceito: Transição Transparente entre Especialidades</h2>
 
-                            <div style={featuresStyle}>
-                                <div>
-                                    <span style={featureLabelStyle}>Detecção Automática</span>
-                                    Identificação da área de especialidade com base nas palavras-chave e contexto da conversa, utilizando processamento de linguagem natural avançado para entender a intenção do usuário mesmo quando expressa de diferentes formas.
-                                </div>
-                                <div>
-                                    <span style={featureLabelStyle}>Transição Fluida</span>
-                                    Mudança de especialidade sem quebrar o fluxo ou exigir seleção do usuário, mantendo o histórico da conversa e o contexto durante todo o processo para uma experiência contínua.
-                                </div>
-                                <div>
-                                    <span style={featureLabelStyle}>Qualificação Contextual</span>
-                                    Perguntas estratégicas para refinar o entendimento antes de mudar para o especialista, adaptadas ao contexto da indústria e necessidades específicas da empresa para uma qualificação mais precisa.
-                                </div>
-                                <div>
-                                    <span style={featureLabelStyle}>Adaptação Sutil</span>
-                                    Mudanças sutis de terminologia e tom para se adequar à área de especialidade, incluindo recomendações de produtos/serviços e exemplos de casos de uso relevantes para o contexto.
-                                </div>
-                                <div>
-                                    <span style={featureLabelStyle}>Re-direcionamento Inteligente</span>
-                                    Capacidade de mudar para outra especialidade se o tópico da conversa evoluir, identificando quando a necessidade do usuário muda durante a interação e se adaptando dinamicamente.
-                                </div>
-                            </div>
-
-                            <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px", marginTop: "30px" }}>Especialidades Implementadas</h3>
-
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "20px" }}>
-                                <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.datamod.color}` }}>
-                                    <h4 style={{ margin: "0 0 10px 0", color: personas.datamod.color }}>Modernização de Dados</h4>
-                                    <p style={{ fontSize: "14px", margin: 0 }}>Especialista em data lakes, integração, arquiteturas modernas e DaaS.</p>
-                                </div>
-                                <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.genai.color}` }}>
-                                    <h4 style={{ margin: "0 0 10px 0", color: personas.genai.color }}>IA Generativa e ML</h4>
-                                    <p style={{ fontSize: "14px", margin: 0 }}>Especialista em modelos de linguagem, automação cognitiva e ML personalizado.</p>
-                                </div>
-                                <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.sap.color}` }}>
-                                    <h4 style={{ margin: "0 0 10px 0", color: personas.sap.color }}>Integração SAP</h4>
-                                    <p style={{ fontSize: "14px", margin: 0 }}>Especialista em conectores SAP, análise de dados financeiros e GenAI4SAP.</p>
-                                </div>
-                                <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.conversational.color}` }}>
-                                    <h4 style={{ margin: "0 0 10px 0", color: personas.conversational.color }}>Agentes Conversacionais</h4>
-                                    <p style={{ fontSize: "14px", margin: 0 }}>Especialista em CCaaS, contact centers digitais e experiência unificada.</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'benefits' && (
-                        <div>
-                            <h2 style={{ color: "#333", marginBottom: "20px" }}>Benefícios para Stakeholders</h2>
-
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
-                                <div style={{ flex: "1 1 calc(50% - 10px)", padding: "20px", backgroundColor: "#f0f9ff", borderRadius: "8px", borderLeft: "4px solid #3b82f6" }}>
-                                    <h3 style={{ fontSize: "18px", color: "#3b82f6", marginTop: 0 }}>Para o Negócio</h3>
-                                    <ul style={{ paddingLeft: "20px", margin: "10px 0", lineHeight: "1.6" }}>
-                                        <li><strong>Aumento na Conversão:</strong> Qualificação mais precisa de leads com até 30% mais agendamentos</li>
-                                        <li><strong>Redução de Custos:</strong> Automação do processo inicial de qualificação, otimizando recursos humanos</li>
-                                        <li><strong>Escalabilidade:</strong> Capacidade de atender múltiplos leads simultaneamente em 24/7</li>
-                                        <li><strong>Consistência:</strong> Padronização da experiência e qualidade da interação inicial</li>
-                                        <li><strong>Insights Avançados:</strong> Dados detalhados sobre interesses e necessidades dos leads</li>
-                                    </ul>
-                                </div>
-
-                                <div style={{ flex: "1 1 calc(50% - 10px)", padding: "20px", backgroundColor: "#f0fdf4", borderRadius: "8px", borderLeft: "4px solid #22c55e" }}>
-                                    <h3 style={{ fontSize: "18px", color: "#22c55e", marginTop: 0 }}>Para os Usuários</h3>
-                                    <ul style={{ paddingLeft: "20px", margin: "10px 0", lineHeight: "1.6" }}>
-                                        <li><strong>Experiência Fluida:</strong> Sem necessidade de navegar por menus ou categorias</li>
-                                        <li><strong>Respostas Personalizadas:</strong> Conteúdo relevante e contextualizado para cada necessidade</li>
-                                        <li><strong>Atendimento Imediato:</strong> Informações especializadas disponíveis instantaneamente</li>
-                                        <li><strong>Conversas Naturais:</strong> Interação que simula o diálogo humano, sem rigidez de bots tradicionais</li>
-                                        <li><strong>Agendamento Simplificado:</strong> Marcação direta de reuniões com especialistas humanos</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: "30px", padding: "20px", backgroundColor: "#fdf2f8", borderRadius: "8px", borderLeft: "4px solid #ec4899" }}>
-                                <h3 style={{ fontSize: "18px", color: "#ec4899", marginTop: 0 }}>Para Equipe Comercial</h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "10px" }}>
-                                    <div style={{ flex: "1 1 200px" }}>
-                                        <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Leads Mais Qualificados</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Receba leads pré-qualificados com informações contextuais completas, aumentando a taxa de conversão e reduzindo o tempo de ciclo de vendas.</p>
-                                    </div>
-                                    <div style={{ flex: "1 1 200px" }}>
-                                        <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Foco Estratégico</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Concentre-se nas negociações de alto valor e relacionamentos estratégicos, enquanto o chatbot cuida da qualificação inicial.</p>
-                                    </div>
-                                    <div style={{ flex: "1 1 200px" }}>
-                                        <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Preparação Prévia</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Acesse o histórico completo da conversa e necessidades específicas antes mesmo do primeiro contato humano.</p>
-                                    </div>
-                                    <div style={{ flex: "1 1 200px" }}>
-                                        <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Agenda Otimizada</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Receba reuniões automaticamente agendadas com leads qualificados, integradas ao seu calendário.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: "30px" }}>
-                                <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px" }}>Métricas de Sucesso</h3>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "15px" }}>
-                                    <div style={{ flex: "1 1 calc(25% - 15px)", textAlign: "center", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
-                                        <div style={{ fontSize: "24px", fontWeight: "bold", color: "#4f46e5", marginBottom: "5px" }}>30%</div>
-                                        <div style={{ fontSize: "14px" }}>Aumento na taxa de conversão de leads</div>
-                                    </div>
-                                    <div style={{ flex: "1 1 calc(25% - 15px)", textAlign: "center", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
-                                        <div style={{ fontSize: "24px", fontWeight: "bold", color: "#4f46e5", marginBottom: "5px" }}>65%</div>
-                                        <div style={{ fontSize: "14px" }}>Redução no tempo de qualificação</div>
-                                    </div>
-                                    <div style={{ flex: "1 1 calc(25% - 15px)", textAlign: "center", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
-                                        <div style={{ fontSize: "24px", fontWeight: "bold", color: "#4f46e5", marginBottom: "5px" }}>24/7</div>
-                                        <div style={{ fontSize: "14px" }}>Disponibilidade para atendimento</div>
-                                    </div>
-                                    <div style={{ flex: "1 1 calc(25% - 15px)", textAlign: "center", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
-                                        <div style={{ fontSize: "24px", fontWeight: "bold", color: "#4f46e5", marginBottom: "5px" }}>90%</div>
-                                        <div style={{ fontSize: "14px" }}>Precisão na identificação da especialidade</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'tech' && (
-                        <div>
-                            <h2 style={{ color: "#333", marginBottom: "20px" }}>Arquitetura Tecnológica</h2>
-
-                            <div style={{ padding: "20px", backgroundColor: "#f8fafc", borderRadius: "8px", marginBottom: "25px" }}>
-                                <h3 style={{ fontSize: "18px", marginTop: 0, marginBottom: "15px" }}>Sistema Multi-Agente</h3>
-                                <p style={{ marginBottom: "15px" }}>
-                                    O assistente utiliza uma arquitetura de múltiplos agentes especializados, orquestrados por um sistema central que determina qual especialista deve atender cada interação.
+                                <p style={{ lineHeight: "1.6", marginBottom: "20px" }}>
+                                    O <strong>Assistente Inteligente Hvar</strong> utiliza um sistema de multi-agentes especializados que se adaptam de forma transparente às necessidades do usuário. Diferentemente dos chatbots tradicionais, onde o usuário precisa selecionar categorias ou ser explicitamente transferido entre departamentos, nosso assistente oferece uma experiência fluida e natural.
                                 </p>
-                                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-                                    <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                                        <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agente Orchestrator</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Coordena o fluxo conversacional, identifica intenções e direciona para o especialista apropriado.</p>
+
+                                <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
+                                    <div style={{ flex: 1, backgroundColor: "#f8fafc", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #4f46e5" }}>
+                                        <h3 style={{ fontSize: "16px", marginTop: 0 }}>Abordagem Tradicional</h3>
+                                        <ul style={{ paddingLeft: "20px", margin: "10px 0" }}>
+                                            <li>Usuário seleciona departamento/categoria</li>
+                                            <li>Menus de navegação interrompem o fluxo</li>
+                                            <li>Transferências explícitas entre agentes</li>
+                                            <li>Experiência fragmentada</li>
+                                        </ul>
                                     </div>
-                                    <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                                        <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agentes Especialistas</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Agentes treinados em domínios específicos do portfólio Hvar, com conhecimento aprofundado em cada área.</p>
+
+                                    <div style={{ flex: 1, backgroundColor: "#f0f9ff", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #0ea5e9" }}>
+                                        <h3 style={{ fontSize: "16px", marginTop: 0 }}>Nossa Abordagem</h3>
+                                        <ul style={{ paddingLeft: "20px", margin: "10px 0" }}>
+                                            <li>Detecção automática da especialidade</li>
+                                            <li>Conversa natural sem interrupções</li>
+                                            <li>Transições suaves baseadas no contexto</li>
+                                            <li>Experiência unificada e contínua</li>
+                                        </ul>
                                     </div>
-                                    <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                                        <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agente Executor</div>
-                                        <p style={{ margin: 0, fontSize: "14px" }}>Responsável por ações práticas como agendamento e integração com sistemas externos (Pipedrive, calendários).</p>
+                                </div>
+
+                                <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px" }}>Como Funciona</h3>
+                                <p style={{ lineHeight: "1.6", marginTop: "15px" }}>
+                                    O assistente inicia com uma abordagem generalista. Conforme a conversa evolui, ele identifica automaticamente a especialidade necessária analisando as palavras-chave, intenções e contexto. A transição para o agente especializado ocorre de forma transparente, adaptando sutilmente o tom, a terminologia e as recomendações sem quebrar o fluxo conversacional.
+                                </p>
+
+                                <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>1</div>
+                                        <div>
+                                            <strong>Engajamento inicial</strong> - Abordagem genérica e acolhedora
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>2</div>
+                                        <div>
+                                            <strong>Detecção de necessidade</strong> - Análise das entradas do usuário para identificar a especialidade
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>3</div>
+                                        <div>
+                                            <strong>Qualificação contextual</strong> - Perguntas estratégicas para refinar o entendimento quando necessário
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>4</div>
+                                        <div>
+                                            <strong>Transição fluida</strong> - Mudança para o agente especializado sem interrupção do fluxo
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", backgroundColor: "#4f46e5", color: "white", display: "flex", alignItems: "center", justifyContent: "center", marginRight: "15px" }}>5</div>
+                                        <div>
+                                            <strong>Resposta especializada</strong> - Comunicação adaptada com terminologia e soluções específicas da área
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        )}
 
-                            <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px", marginBottom: "20px" }}>Componentes do Sistema</h3>
+                        {activeTab === 'features' && (
+                            <div>
+                                <h2 style={{ color: "#333", marginBottom: "20px" }}>Funcionalidades Principais</h2>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                                <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-                                    <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>1</div>
+                                <div style={featuresStyle}>
                                     <div>
-                                        <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Frontend Adaptativo</div>
-                                        <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-                                            Interface de usuário dinâmica que se adapta sutilmente conforme a especialidade detectada, usando React para renderização e Tailwind CSS para estilização.
-                                        </p>
+                                        <span style={featureLabelStyle}>Detecção Automática</span>
+                                        Identificação da área de especialidade com base nas palavras-chave e contexto da conversa, utilizando processamento de linguagem natural avançado para entender a intenção do usuário mesmo quando expressa de diferentes formas.
+                                    </div>
+                                    <div>
+                                        <span style={featureLabelStyle}>Transição Fluida</span>
+                                        Mudança de especialidade sem quebrar o fluxo ou exigir seleção do usuário, mantendo o histórico da conversa e o contexto durante todo o processo para uma experiência contínua.
+                                    </div>
+                                    <div>
+                                        <span style={featureLabelStyle}>Qualificação Contextual</span>
+                                        Perguntas estratégicas para refinar o entendimento antes de mudar para o especialista, adaptadas ao contexto da indústria e necessidades específicas da empresa para uma qualificação mais precisa.
+                                    </div>
+                                    <div>
+                                        <span style={featureLabelStyle}>Adaptação Sutil</span>
+                                        Mudanças sutis de terminologia e tom para se adequar à área de especialidade, incluindo recomendações de produtos/serviços e exemplos de casos de uso relevantes para o contexto.
+                                    </div>
+                                    <div>
+                                        <span style={featureLabelStyle}>Re-direcionamento Inteligente</span>
+                                        Capacidade de mudar para outra especialidade se o tópico da conversa evoluir, identificando quando a necessidade do usuário muda durante a interação e se adaptando dinamicamente.
                                     </div>
                                 </div>
 
-                                <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-                                    <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>2</div>
-                                    <div>
-                                        <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Motor de Detecção de Especialidade</div>
-                                        <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-                                            Sistema de NLP baseado em LLM que analisa a entrada do usuário para identificar a área de especialidade relevante, usando técnicas de classificação de texto e reconhecimento de entidades.
-                                        </p>
-                                    </div>
-                                </div>
+                                <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px", marginTop: "30px" }}>Especialidades Implementadas</h3>
 
-                                <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-                                    <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>3</div>
-                                    <div>
-                                        <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Base de Conhecimento</div>
-                                        <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-                                            Repositório de informações específicas para cada especialidade, incluindo descrições de serviços, casos de uso, FAQs e argumentos comerciais. Implementado com vetorização semântica para recuperação contextual.
-                                        </p>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "20px" }}>
+                                    <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.datamod.color}` }}>
+                                        <h4 style={{ margin: "0 0 10px 0", color: personas.datamod.color }}>Modernização de Dados</h4>
+                                        <p style={{ fontSize: "14px", margin: 0 }}>Especialista em data lakes, integração, arquiteturas modernas e DaaS.</p>
                                     </div>
-                                </div>
-
-                                <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-                                    <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>4</div>
-                                    <div>
-                                        <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>APIs de Integração</div>
-                                        <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-                                            Conectores para sistemas externos como Pipedrive (CRM), Google Calendar (agendamento) e Google Analytics (rastreamento de origem). Implementados com arquitetura RESTful e autenticação OAuth.
-                                        </p>
+                                    <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.genai.color}` }}>
+                                        <h4 style={{ margin: "0 0 10px 0", color: personas.genai.color }}>IA Generativa e ML</h4>
+                                        <p style={{ fontSize: "14px", margin: 0 }}>Especialista em modelos de linguagem, automação cognitiva e ML personalizado.</p>
                                     </div>
-                                </div>
-
-                                <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
-                                    <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>5</div>
-                                    <div>
-                                        <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Módulo de Aprendizado Contínuo</div>
-                                        <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
-                                            Sistema de feedback que analisa interações passadas para melhorar a detecção de especialidade e refinar respostas. Implementado com técnicas de aprendizado semi-supervisionado.
-                                        </p>
+                                    <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.sap.color}` }}>
+                                        <h4 style={{ margin: "0 0 10px 0", color: personas.sap.color }}>Integração SAP</h4>
+                                        <p style={{ fontSize: "14px", margin: 0 }}>Especialista em conectores SAP, análise de dados financeiros e GenAI4SAP.</p>
+                                    </div>
+                                    <div style={{ flex: "1 1 calc(33% - 15px)", padding: "15px", backgroundColor: "#f0f5ff", borderRadius: "8px", borderTop: `3px solid ${personas.conversational.color}` }}>
+                                        <h4 style={{ margin: "0 0 10px 0", color: personas.conversational.color }}>Agentes Conversacionais</h4>
+                                        <p style={{ fontSize: "14px", margin: 0 }}>Especialista em CCaaS, contact centers digitais e experiência unificada.</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+
+                        {activeTab === 'benefits' && (
+                            <div>
+                                <h2 style={{ color: "#333", marginBottom: "20px" }}>Benefícios para Stakeholders</h2>
+
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "20px" }}>
+                                    <div style={{ flex: "1 1 calc(50% - 10px)", padding: "20px", backgroundColor: "#f0f9ff", borderRadius: "8px", borderLeft: "4px solid #3b82f6" }}>
+                                        <h3 style={{ fontSize: "18px", color: "#3b82f6", marginTop: 0 }}>Para o Negócio</h3>
+                                        <ul style={{ paddingLeft: "20px", margin: "10px 0", lineHeight: "1.6" }}>
+                                            <li><strong>Aumento na Conversão:</strong> Qualificação mais precisa de leads com até 30% mais agendamentos</li>
+                                            <li><strong>Redução de Custos:</strong> Automação do processo inicial de qualificação, otimizando recursos humanos</li>
+                                            <li><strong>Escalabilidade:</strong> Capacidade de atender múltiplos leads simultaneamente em 24/7</li>
+                                            <li><strong>Consistência:</strong> Padronização da experiência e qualidade da interação inicial</li>
+                                            <li><strong>Insights Avançados:</strong> Dados detalhados sobre interesses e necessidades dos leads</li>
+                                        </ul>
+                                    </div>
+
+                                    <div style={{ flex: "1 1 calc(50% - 10px)", padding: "20px", backgroundColor: "#f0fdf4", borderRadius: "8px", borderLeft: "4px solid #22c55e" }}>
+                                        <h3 style={{ fontSize: "18px", color: "#22c55e", marginTop: 0 }}>Para os Usuários</h3>
+                                        <ul style={{ paddingLeft: "20px", margin: "10px 0", lineHeight: "1.6" }}>
+                                            <li><strong>Experiência Fluida:</strong> Sem necessidade de navegar por menus ou categorias</li>
+                                            <li><strong>Respostas Personalizadas:</strong> Conteúdo relevante e contextualizado para cada necessidade</li>
+                                            <li><strong>Atendimento Imediato:</strong> Informações especializadas disponíveis instantaneamente</li>
+                                            <li><strong>Conversas Naturais:</strong> Interação que simula o diálogo humano, sem rigidez de bots tradicionais</li>
+                                            <li><strong>Agendamento Simplificado:</strong> Marcação direta de reuniões com especialistas humanos</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: "30px", padding: "20px", backgroundColor: "#fdf2f8", borderRadius: "8px", borderLeft: "4px solid #ec4899" }}>
+                                    <h3 style={{ fontSize: "18px", color: "#ec4899", marginTop: 0 }}>Para Equipe Comercial</h3>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "10px" }}>
+                                        <div style={{ flex: "1 1 200px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Leads Mais Qualificados</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Receba leads pré-qualificados com informações contextuais completas, aumentando a taxa de conversão e reduzindo o tempo de ciclo de vendas.</p>
+                                        </div>
+                                        <div style={{ flex: "1 1 200px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Foco Estratégico</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Concentre-se nas negociações de alto valor e relacionamentos estratégicos, enquanto o chatbot cuida da qualificação inicial.</p>
+                                        </div>
+                                        <div style={{ flex: "1 1 200px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Preparação Prévia</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Acesse o histórico completo da conversa e necessidades específicas antes mesmo do primeiro contato humano.</p>
+                                        </div>
+                                        <div style={{ flex: "1 1 200px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>Agenda Otimizada</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Receba reuniões automaticamente agendadas com leads qualificados, integradas ao seu calendário.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: "30px" }}>
+                                    <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px" }}>Avaliação de Impacto Futura</h3>
+                                    <p style={{ marginTop: "15px" }}>
+                                        Indicadores qualitativos de sucesso e framework de avaliação
+                                        para implementação futura:
+                                    </p>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "15px", marginTop: "15px" }}>
+                                        <div style={{ flex: "1 1 calc(50% - 15px)", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#4f46e5" }}>Indicadores Qualitativos Iniciais</div>
+                                            <ul style={{ paddingLeft: "20px", margin: "0" }}>
+                                                <li>Feedback dos usuários sobre a fluidez da experiência</li>
+                                                <li>Avaliação da equipe comercial sobre a qualidade das informações coletadas</li>
+                                                <li>Análise de transcrições para verificar precisão na detecção de especialidades</li>
+                                            </ul>
+                                        </div>
+                                        <div style={{ flex: "1 1 calc(50% - 15px)", padding: "15px", backgroundColor: "#f8fafc", borderRadius: "8px" }}>
+                                            <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#4f46e5" }}>Framework de Avaliação Futuro</div>
+                                            <ul style={{ paddingLeft: "20px", margin: "0" }}>
+                                                <li>Qualidade do Documento de Qualificação (avaliação categoria: bom, médio, ótimo)</li>
+                                                <li>Capacidade do modelo em responder dúvidas técnicas durante a qualificação (f1-score)</li>
+                                                <li>Tempo médio até identificação correta da especialidade</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'tech' && (
+                            <div>
+                                <h2 style={{ color: "#333", marginBottom: "20px" }}>Arquitetura Tecnológica</h2>
+
+                                <div style={{ padding: "20px", backgroundColor: "#f8fafc", borderRadius: "8px", marginBottom: "25px" }}>
+                                    <h3 style={{ fontSize: "18px", marginTop: 0, marginBottom: "15px" }}>Sistema Multi-Agente</h3>
+                                    <p style={{ marginBottom: "15px" }}>
+                                        O assistente utiliza uma arquitetura de múltiplos agentes especializados, orquestrados por um sistema central que determina qual especialista deve atender cada interação.
+                                    </p>
+                                    <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
+                                        <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+                                            <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agente Orchestrator</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Coordena o fluxo conversacional, identifica intenções e direciona para o especialista apropriado.</p>
+                                        </div>
+                                        <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+                                            <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agentes Especialistas</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Agentes treinados em domínios específicos do portfólio Hvar, com conhecimento aprofundado em cada área.</p>
+                                        </div>
+                                        <div style={{ flex: "1 1 200px", padding: "15px", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+                                            <div style={{ fontWeight: "600", marginBottom: "8px", color: "#4f46e5" }}>Agente Executor</div>
+                                            <p style={{ margin: 0, fontSize: "14px" }}>Responsável por ações práticas como agendamento e integração com sistemas externos (Pipedrive, calendários).</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h3 style={{ color: "#4f46e5", borderBottom: "1px solid #4f46e5", paddingBottom: "8px", marginBottom: "20px" }}>Componentes do Sistema</h3>
+
+                                <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+                                    <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+                                        <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>1</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Frontend Adaptativo</div>
+                                            <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+                                                Interface de usuário dinâmica que se adapta sutilmente conforme a especialidade detectada, usando React para renderização e Tailwind CSS para estilização.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+                                        <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>2</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Motor de Detecção de Especialidade</div>
+                                            <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+                                                Sistema de NLP baseado em LLM que analisa a entrada do usuário para identificar a área de especialidade relevante, usando técnicas de classificação de texto e reconhecimento de entidades.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+                                        <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>3</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Base de Conhecimento</div>
+                                            <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+                                                Repositório de informações específicas para cada especialidade, incluindo descrições de serviços, casos de uso, FAQs e argumentos comerciais. Implementado com vetorização semântica para recuperação contextual.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+                                        <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>4</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>APIs de Integração</div>
+                                            <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+                                                Conectores para sistemas externos como Pipedrive (CRM), Google Calendar (agendamento) e Google Analytics (rastreamento de origem). Implementados com arquitetura RESTful e autenticação OAuth.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+                                        <div style={{ padding: "10px", backgroundColor: "#4f46e5", color: "white", borderRadius: "8px", fontSize: "20px", minWidth: "40px", textAlign: "center" }}>5</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", fontSize: "16px", marginBottom: "5px" }}>Módulo de Aprendizado Contínuo</div>
+                                            <p style={{ margin: 0, fontSize: "14px", lineHeight: "1.5" }}>
+                                                Sistema de feedback que analisa interações passadas para melhorar a detecção de especialidade e refinar respostas. Implementado com técnicas de aprendizado semi-supervisionado.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
