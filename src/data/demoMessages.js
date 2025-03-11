@@ -40,9 +40,22 @@ Para que possamos direcionar melhor nossa proposta, poderia me contar quais mód
   
   Empresas que adotaram nossas soluções de Integração SAP reduziram em até <strong>60%</strong> o tempo de implementação e ganharam mais agilidade na análise de resultados.
   
-  Gostaria de conhecer algum caso específico ou entender melhor como estruturamos esse processo?`,
+  Gostaria de agendar uma demonstração com nosso especialista em Integração SAP para entender como podemos ajudar seu caso específico?`,
         persona: 'sap',
         timestamp: '14:23'
+    },
+    {
+        sender: 'user',
+        text: `Sim, tenho interesse. Podemos agendar para a próxima semana.`,
+        timestamp: '14:24'
+    },
+    {
+        sender: 'bot',
+        text: `Perfeito! Acabei de adicionar sua demonstração com nosso especialista em Integração SAP na terça-feira, 18 de março, às 14:00. Um convite foi enviado para seu email com os detalhes da reunião.
+
+Nosso time está ansioso para mostrar como podemos otimizar a integração entre seus sistemas SAP e Power BI. Se precisar reagendar ou tiver outras dúvidas antes da reunião, é só me avisar!`,
+        persona: 'sap',
+        timestamp: '14:25'
     }
 ];
 
@@ -88,9 +101,22 @@ const demo2Messages = [
   
   Clientes que adotaram essas soluções diminuíram em até <strong>65%</strong> o volume de interações humanas nas etapas iniciais, melhorando a satisfação do cliente.
   
-  Gostaria de conhecer um caso específico ou saber mais sobre como funciona a implementação?`,
+  Podemos agendar uma conversa com nossa equipe de Conversational AI para explorar como podemos reduzir seus tempos de espera?`,
         persona: 'conversational',
         timestamp: '14:33'
+    },
+    {
+        sender: 'user',
+        text: `Sim, tem disponibilidade na quinta-feira pela manhã?`,
+        timestamp: '14:34'
+    },
+    {
+        sender: 'bot',
+        text: `Excelente! Agendei sua reunião com nossa equipe de Conversational AI para quinta-feira, 13 de março, às 10:30. Você receberá um convite por email com o link para a videoconferência nos próximos minutos.
+
+Durante a reunião, nossos especialistas vão apresentar casos de implementação similares e discutir as melhores abordagens para o seu call center. Se precisar reagendar ou tiver alguma dúvida até lá, estou à disposição!`,
+        persona: 'conversational',
+        timestamp: '14:35'
     }
 ];
 
@@ -138,9 +164,24 @@ const demo3Messages = [
   
   Empresas que implementaram soluções similares reduziram em até <strong>70%</strong> o tempo dedicado a esses processos.
   
-  Gostaria de conhecer um caso específico ou saber mais sobre como funciona a implementação?`,
+  Gostaria de agendar uma sessão de diagnóstico com nossa equipe de IA Generativa para avaliarmos seu caso específico?`,
         persona: 'genai',
         timestamp: '14:43'
+    },
+    {
+        sender: 'user',
+        text: `Com certeza! Pode ser na segunda-feira à tarde.`,
+        timestamp: '14:44'
+    },
+    {
+        sender: 'bot',
+        text: `Perfeito! Agendei sua sessão de diagnóstico com nossa equipe de IA Generativa para segunda-feira, 17 de março, às 15:00. Um convite com os detalhes e o link da reunião já foi enviado para seu email.
+
+Durante esta sessão, vamos analisar amostras dos seus documentos (se possível compartilhá-los) e discutir as melhores abordagens para automatizar esse trabalho. Nosso time está ansioso para mostrar como a IA Generativa pode transformar seus processos de documentação!
+
+Se precisar reagendar ou tiver qualquer pergunta antes da reunião, estou à disposição.`,
+        persona: 'genai',
+        timestamp: '14:45'
     }
 ];
 
